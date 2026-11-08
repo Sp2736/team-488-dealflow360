@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { installDemoInterceptor } from './interceptor';
 import { getStore } from './db/store';
 import { getSessionOrNull } from './server/session';
+import './db/seed'; // Registers deterministic seed generator
 
 interface DemoBootstrapProps {
   children: React.ReactNode;
