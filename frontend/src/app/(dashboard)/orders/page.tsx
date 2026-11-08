@@ -1,9 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Toolbar } from '@/components/Toolbar';
+import { withBasePath } from '@/lib/basePath';
 
 export default function OrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,10 +18,6 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [warehouseFilter, setWarehouseFilter] = useState('');
-
-  useEffect(() => {
-    fetchData();
-  }, [statusFilter, warehouseFilter]);
 
   async function fetchData() {
     setLoading(true);
@@ -41,6 +40,10 @@ export default function OrdersPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    fetchData();
+  }, [statusFilter, warehouseFilter]);
 
   // Handle group by toggles - these are mutually exclusive
   const toggleGroupBy = (type: string) => {
@@ -113,7 +116,7 @@ export default function OrdersPage() {
               const isSplit = allocations.length > 1;
 
               return (
-                <tr key={order.id} className="clickable" onClick={() => window.location.href = `/fulfillment/${order.id}`}>
+                <tr key={order.id} className="clickable" onClick={() => router.push(withBasePath(`/fulfillment/${order.id}`))}>
                   <td style={{ fontWeight: 700, color: 'var(--primary)' }}>
                     {order.orderNumber || order.quote?.quoteNumber || order.id.slice(0, 8)}
                   </td>

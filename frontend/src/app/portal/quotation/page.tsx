@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ToastProvider, useToast } from '@/components/Toast';
 import { useRouter } from 'next/navigation';
@@ -18,7 +18,9 @@ type PortalLine = {
 export default function CustomerPortalPageWrapper() {
   return (
     <ToastProvider>
-      <CustomerPortalPage />
+      <Suspense fallback={<div className="card" style={{ padding: 40 }}><p>Loading quotation portal...</p></div>}>
+        <CustomerPortalPage />
+      </Suspense>
     </ToastProvider>
   );
 }

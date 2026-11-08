@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useRouter } from "next/navigation";
+import { withBasePath } from "@/lib/basePath";
 
 export interface UserProfile {
   id: string;
@@ -33,7 +34,7 @@ export function useLogin() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: async (credentials: { email: string; password: string }) => {
+    mutationFn: async (credentials: { email?: string; password?: string; persona?: string }) => {
       return apiClient<{ user: UserProfile; message: string }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify(credentials),
@@ -41,7 +42,11 @@ export function useLogin() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["auth", "me"], data.user);
-      router.push("/dashboard");
+      if (data.user.role === "CUSTOMER") {
+        router.push(withBasePath("/portal/quotation"));
+      } else {
+        router.push(withBasePath("/dashboard"));
+      }
     },
   });
 }
@@ -59,7 +64,20 @@ export function useLogout() {
     onSuccess: () => {
       queryClient.setQueryData(["auth", "me"], null);
       queryClient.clear();
-      router.push("/login");
+      router.push(withBasePath("/login"));
     },
   });
+}
+
+export function useAuth() {
+  const { data: user, isLoading } = useCurrentUser();
+  const loginMutation = useLogin();
+  const logoutMutation = useLogout();
+
+  return {
+    user,
+    isLoading,
+    login: loginMutation.mutateAsync,
+    logout: logoutMutation.mutateAsync,
+  };
 }

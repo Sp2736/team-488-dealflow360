@@ -1,3 +1,5 @@
+import { withBasePath } from "@/lib/basePath";
+
 export interface ApiErrorResponse {
   code: string;
   message: string;
@@ -25,7 +27,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Shared apiClient wrapper with credentials: "include", JSON parsing, and typed error responses.
+ * Shared apiClient wrapper with JSON parsing and typed error responses.
  */
 export async function apiClient<T>(
   endpoint: string,
@@ -39,7 +41,6 @@ export async function apiClient<T>(
 
   const response = await fetch(url, {
     ...options,
-    credentials: "include",
     headers: {
       ...defaultHeaders,
       ...options.headers,
@@ -58,7 +59,7 @@ export async function apiClient<T>(
     if (response.status === 401 && typeof window !== "undefined") {
       const isAuthPath = window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal");
       if (!isAuthPath) {
-        window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
+        window.location.href = withBasePath(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`);
       }
     }
 

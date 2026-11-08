@@ -1,0 +1,50 @@
+name: Deploy Demo
+on:
+  push:
+    branches: [gh-pages]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:demo
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /team-488-dealflow360
+      - run: touch out/.nojekyll && test -f out/404.html
+      - name: Post-build security guard
+        run: grep -rEn "(JWT_SECRET|DATABASE_URL|AI_API_KEY|password_hash|bcrypt|prisma)" out/ && exit 1 || true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4

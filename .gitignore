@@ -34,4 +34,12 @@ static/
 # Local test scripts & configs
 test_db.ts
 test_*.ts
-docker-compose.yml
+docker-compose.yml
+_reference_*
+frontend/_reference_*
+
+# Master prompt documents (never commit)
+dealflow360_demo_gh_pages_prompt.md
+dealflow360_demo_audit_testing_prompt.md
+
+
