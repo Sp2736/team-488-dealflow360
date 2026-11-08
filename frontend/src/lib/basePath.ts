@@ -4,3 +4,4 @@ export const withBasePath = (p: string): string => {
   if (p.startsWith(base) && base !== '') return p;
   return base + (p.startsWith('/') ? p : `/${p}`);
 };
+

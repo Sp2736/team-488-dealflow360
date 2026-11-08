@@ -63,3 +63,4 @@ export function getRequiredRolesForApiRoute(pathname: string): UserRole[] | null
   const longest = matchingPrefixes.reduce((a, b) => (b.length > a.length ? b : a));
   return API_ROUTE_ROLE_MAP[longest];
 }
+

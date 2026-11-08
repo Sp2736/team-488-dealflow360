@@ -57,9 +57,12 @@ export async function apiClient<T>(
 
     // Trigger global 401 handling if unauthorized in browser environment
     if (response.status === 401 && typeof window !== "undefined") {
-      const isAuthPath = window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal");
+      const loginPath = withBasePath("/login");
+      const portalPath = withBasePath("/portal");
+      const current = window.location.pathname;
+      const isAuthPath = current.startsWith(loginPath) || current.startsWith(portalPath);
       if (!isAuthPath) {
-        window.location.href = withBasePath(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`);
+        window.location.href = withBasePath(`/login?callbackUrl=${encodeURIComponent(current)}`);
       }
     }
 

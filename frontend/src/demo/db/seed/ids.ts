@@ -1,3 +1,4 @@
+// src/demo/db/seed/ids.ts
 /**
  * Deterministic Seeded IDs & Pre-rendered Runtime Pool IDs
  *
@@ -40,3 +41,27 @@ export const SEEDED_SUBSCRIPTION_IDS = [...BASE_SUBSCRIPTION_IDS, ...POOL_SUBSCR
 export const BASE_INVITE_TOKENS = Array.from({ length: 8 }, (_, i) => `invite_${pad(i + 1)}`);
 export const POOL_INVITE_TOKENS = Array.from({ length: 20 }, (_, i) => `invite-demo-${pad(i + 1, 2)}`);
 export const SEEDED_INVITE_TOKENS = [...BASE_INVITE_TOKENS, ...POOL_INVITE_TOKENS];
+
+/**
+ * Allocates the next free runtime pool ID for dynamic entity creation.
+ */
+export function allocatePoolId(
+  type: 'quote' | 'order' | 'invoice' | 'product' | 'subscription' | 'invite',
+  existingIds: Set<string>
+): string {
+  const poolMap = {
+    quote: POOL_QUOTE_IDS,
+    order: POOL_ORDER_IDS,
+    invoice: POOL_INVOICE_IDS,
+    product: POOL_PRODUCT_IDS,
+    subscription: POOL_SUBSCRIPTION_IDS,
+    invite: POOL_INVITE_TOKENS,
+  };
+
+  const pool = poolMap[type];
+  const next = pool.find(id => !existingIds.has(id));
+  if (!next) {
+    throw new Error(`Demo limit reached for new ${type} (${pool.length}). Use Reset demo.`);
+  }
+  return next;
+}

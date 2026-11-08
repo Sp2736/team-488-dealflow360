@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { DemoBootstrap } from "@/demo/DemoBootstrap";
 
 export const metadata: Metadata = {
   title: "DealFlow360 – Interactive Demo",
@@ -22,9 +23,11 @@ export default function RootLayout({
         <meta name="robots" content="noindex" />
       </head>
       <body>
-        <Providers>
-          {children}
-        </Providers>
+        <DemoBootstrap>
+          <Providers>
+            {children}
+          </Providers>
+        </DemoBootstrap>
       </body>
     </html>
   );
