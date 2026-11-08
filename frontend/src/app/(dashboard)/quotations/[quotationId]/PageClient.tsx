@@ -58,6 +58,13 @@ export default function QuotationDetailPage() {
   const [showCopilot, setShowCopilot] = useState(false);
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [copilotExplanation, setCopilotExplanation] = useState<string | null>(null);
+  const [typedExplanation, setTypedExplanation] = useState<string>('');
+  const [copilotMetadata, setCopilotMetadata] = useState<{
+    usedFallback?: boolean;
+    note?: string;
+    structuredExplanation?: any;
+  } | null>(null);
+  const [showInputsDisclosure, setShowInputsDisclosure] = useState(false);
 
   // Portal link state
   const [portalLink, setPortalLink] = useState<string | null>(null);
@@ -399,9 +406,28 @@ export default function QuotationDetailPage() {
             </div>
           )}
           {/* AI Copilot inline — appears only after evaluation */}
-          <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 13 }}>🤖 AI Deal Copilot</span>
+          <div style={{ marginTop: 16, borderTop: '2px solid var(--border)', paddingTop: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontWeight: 800, fontSize: 13 }}>🤖 AI Deal Copilot</span>
+                {copilotMetadata?.usedFallback && (
+                  <span
+                    style={{
+                      background: '#ecfdf5',
+                      color: '#065f46',
+                      border: '1.5px solid #10b981',
+                      padding: '1px 6px',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      borderRadius: 4,
+                      textTransform: 'uppercase',
+                    }}
+                    title={copilotMetadata.note}
+                  >
+                    ⚡ Pure Engine Fallback
+                  </span>
+                )}
+              </div>
               <button
                 className="btn btn-secondary"
                 style={{ fontSize: 12, padding: '5px 12px' }}
@@ -409,6 +435,8 @@ export default function QuotationDetailPage() {
                 onClick={async () => {
                   setCopilotLoading(true);
                   setCopilotExplanation(null);
+                  setTypedExplanation('');
+                  setCopilotMetadata(null);
                   try {
                     const res = await fetch('/api/ai/explain', {
                       method: 'POST',
@@ -416,9 +444,28 @@ export default function QuotationDetailPage() {
                       body: JSON.stringify({ quoteId: quotationId }),
                     });
                     const data = await res.json();
-                    setCopilotExplanation(data.explanation || data.error || 'No explanation returned.');
+                    const fullText = data.explanation || data.error || 'No explanation returned.';
+                    setCopilotExplanation(fullText);
+                    setCopilotMetadata({
+                      usedFallback: data.usedFallback,
+                      note: data.note,
+                      structuredExplanation: data.structuredExplanation,
+                    });
+
+                    // Character typing animation
+                    let idx = 0;
+                    const interval = setInterval(() => {
+                      idx += 3;
+                      if (idx >= fullText.length) {
+                        setTypedExplanation(fullText);
+                        clearInterval(interval);
+                      } else {
+                        setTypedExplanation(fullText.slice(0, idx));
+                      }
+                    }, 16);
                   } catch {
                     setCopilotExplanation('AI service unavailable. Please try again.');
+                    setTypedExplanation('AI service unavailable. Please try again.');
                   } finally {
                     setCopilotLoading(false);
                   }
@@ -427,13 +474,64 @@ export default function QuotationDetailPage() {
                 {copilotLoading ? 'Explaining…' : '✨ Explain This Deal Risk'}
               </button>
             </div>
+
             {copilotExplanation && (
-              <div style={{
-                background: 'var(--bg-subtle)', border: '1px solid var(--border)',
-                borderRadius: 6, padding: '12px 14px', fontSize: 13, lineHeight: 1.65,
-                color: 'var(--fg)', fontStyle: 'italic'
-              }}>
-                {copilotExplanation}
+              <div style={{ marginTop: 8 }}>
+                <div style={{
+                  background: 'var(--bg-subtle)', border: '2px solid var(--border)',
+                  borderRadius: 6, padding: '12px 14px', fontSize: 13, lineHeight: 1.65,
+                  color: 'var(--fg)', fontStyle: 'italic', position: 'relative'
+                }}>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>
+                    {typedExplanation}
+                    {typedExplanation.length < copilotExplanation.length && (
+                      <span style={{ fontWeight: 900, color: '#f59e0b', marginLeft: 2 }}>▌</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Show inputs disclosure */}
+                <div style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowInputsDisclosure(prev => !prev)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--fg-muted)',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: '2px 0',
+                    }}
+                  >
+                    {showInputsDisclosure ? '▲ Hide Engine Inputs' : '▼ Show Inputs (Risk Reasons & Thresholds)'}
+                  </button>
+
+                  {showInputsDisclosure && (
+                    <div style={{
+                      marginTop: 6,
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 4,
+                      padding: '10px 12px',
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    }}>
+                      <div style={{ fontWeight: 700, marginBottom: 4, color: '#0f172a' }}>Engine Inputs:</div>
+                      <div>• Quote Status: {quote.status}</div>
+                      <div>• Risk Score: {quote.riskScore ?? 0} ({quote.riskLevel || 'LOW'})</div>
+                      <div>• Discount Total: ₹{Number(quote.discountAmount || 0).toLocaleString('en-IN')}</div>
+                      <div>• Gross Margin: {quote.marginPercent ?? 0}%</div>
+                      {copilotMetadata?.structuredExplanation && (
+                        <div style={{ marginTop: 6, borderTop: '1px dashed #cbd5e1', paddingTop: 4 }}>
+                          <div>• Structured Summary: {copilotMetadata.structuredExplanation.summary}</div>
+                          <div>• Risk Factors: {copilotMetadata.structuredExplanation.riskExplanation}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

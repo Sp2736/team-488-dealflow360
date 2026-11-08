@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useDemoSession } from '@/demo/ui/useDemoSession';
 import { getStore, reseedStore } from '@/demo/db/store';
 import { withBasePath } from '@/lib/basePath';
+import { NotificationDropdown } from '@/demo/ui/NotificationDropdown';
 import type { UserRole } from '@/lib/types';
 
 interface NavItem {
@@ -252,6 +253,9 @@ export default function TopNav() {
         >
           ↺ Reset
         </button>
+
+        {/* Notifications & System Alerts */}
+        <NotificationDropdown />
 
         {/* Persona Switcher Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

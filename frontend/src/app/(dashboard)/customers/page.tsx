@@ -9,7 +9,11 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [invitePreview, setInvitePreview] = useState<{
+    inviteUrl: string;
+    token: string;
+    emailPreview: { to: string; subject: string; html: string };
+  } | null>(null);
 
   async function fetchData() {
     setLoading(true);
@@ -32,14 +36,22 @@ export default function CustomersPage() {
 
   const handleSendInvite = async (customerId: string) => {
     setSubmitting(true);
-    setInviteLink(null);
+    setInvitePreview(null);
     try {
       const res = await fetch(`/api/customers/${customerId}/invite`, {
         method: 'POST',
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setInviteLink(data.inviteUrl);
+        setInvitePreview({
+          inviteUrl: data.inviteUrl,
+          token: data.token,
+          emailPreview: data.emailPreview || {
+            to: 'customer@example.com',
+            subject: 'Welcome to DealFlow360 Customer Portal',
+            html: `<p>You have been invited to DealFlow360. Link: <a href="${data.inviteUrl}">${data.inviteUrl}</a></p>`,
+          },
+        });
       } else {
         toast.error(data.error || 'Failed to generate invite');
       }
@@ -51,10 +63,9 @@ export default function CustomersPage() {
   };
 
   const copyToClipboard = () => {
-    if (inviteLink) {
-      navigator.clipboard.writeText(inviteLink);
-      toast.success('Link copied to clipboard!');
-      setInviteLink(null); // Close modal
+    if (invitePreview?.inviteUrl) {
+      navigator.clipboard.writeText(invitePreview.inviteUrl);
+      toast.success('Onboarding link copied to clipboard!');
     }
   };
 
@@ -131,27 +142,65 @@ export default function CustomersPage() {
         {renderTable()}
       </div>
 
-      {inviteLink && (
+      {invitePreview && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', 
-          justifyContent: 'center', zIndex: 9999
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', 
+          justifyContent: 'center', zIndex: 9999, padding: '16px',
         }}>
-          <div className="card card-shadow-lg" style={{ width: 400, maxWidth: '90%' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Invite Generated</h3>
-            <p style={{ color: 'var(--fg-muted)', fontSize: 13, marginBottom: 20 }}>
-              Share this link with the customer to allow them to set up their portal account. The link expires in 7 days.
+          <div className="card card-shadow-lg" style={{ width: 560, maxWidth: '100%', background: '#ffffff', border: '3px solid #000' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: 10, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>✉️</span>
+                <h3 style={{ fontSize: 16, fontWeight: 900, margin: 0, textTransform: 'uppercase' }}>
+                  Invite Email Preview (Simulated)
+                </h3>
+              </div>
+              <span className="badge badge-warning" style={{ fontSize: 10 }}>Demo No-Send</span>
+            </div>
+
+            <p style={{ color: 'var(--fg-muted)', fontSize: 12, marginBottom: 12 }}>
+              In production, an email is dispatched via SMTP/SendGrid. In this browser-side demo, we render the exact email template and onboarding token below:
             </p>
-            <input 
-              className="input" 
-              type="text" 
-              value={inviteLink} 
-              readOnly 
-              style={{ marginBottom: 16 }}
+
+            {/* Email Meta */}
+            <div style={{ background: '#f8fafc', border: '2px solid #000', padding: '10px 14px', marginBottom: 14, fontSize: 12 }}>
+              <div style={{ marginBottom: 4 }}><strong>To:</strong> {invitePreview.emailPreview.to}</div>
+              <div style={{ marginBottom: 4 }}><strong>Subject:</strong> {invitePreview.emailPreview.subject}</div>
+              <div><strong>Token:</strong> <code>{invitePreview.token}</code></div>
+            </div>
+
+            {/* Rendered HTML Preview */}
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                padding: '14px',
+                marginBottom: 16,
+                fontSize: 13,
+                maxHeight: '160px',
+                overflowY: 'auto',
+              }}
+              dangerouslySetInnerHTML={{ __html: invitePreview.emailPreview.html }}
             />
+
+            {/* Onboarding Link Input */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
+                Direct Onboarding Link (Pool Token):
+              </label>
+              <input 
+                className="input" 
+                type="text" 
+                value={invitePreview.inviteUrl} 
+                readOnly 
+                style={{ width: '100%', fontSize: 12, fontFamily: 'monospace' }}
+              />
+            </div>
+
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setInviteLink(null)}>Close</button>
-              <button className="btn btn-primary" onClick={copyToClipboard}>Copy Link</button>
+              <button className="btn btn-secondary" onClick={() => setInvitePreview(null)}>Close</button>
+              <button className="btn btn-primary" onClick={copyToClipboard}>📋 Copy Onboarding Link</button>
             </div>
           </div>
         </div>
