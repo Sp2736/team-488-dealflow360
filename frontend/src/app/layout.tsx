@@ -9,9 +9,15 @@ import { TraceDrawer } from "@/demo/ui/TraceDrawer";
 export const metadata: Metadata = {
   title: "DealFlow360 – Interactive Demo",
   description: "Sales & Operations Command Center (Interactive Browser-Side Demo)",
-  robots: {
-    index: false,
-    follow: false,
+  openGraph: {
+    title: "DealFlow360 – Interactive Demo",
+    description: "Enterprise Sales & Operations Command Center running pure business engines client-side.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DealFlow360 – Interactive Demo",
+    description: "Enterprise Sales & Operations Command Center running pure business engines client-side.",
   },
 };
 
@@ -24,6 +30,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="robots" content="noindex" />
+        <meta httpEquiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;" />
       </head>
       <body>
         <DemoBootstrap>
