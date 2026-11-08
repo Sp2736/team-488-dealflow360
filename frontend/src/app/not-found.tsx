@@ -72,7 +72,7 @@ export default function NotFound() {
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           {dynamicContext && (
             <Link
-              href={dynamicContext.listUrl}
+              href={withBasePath(dynamicContext.listUrl)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -90,7 +90,7 @@ export default function NotFound() {
             </Link>
           )}
           <Link
-            href="/dashboard"
+            href={withBasePath("/dashboard")}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -107,7 +107,7 @@ export default function NotFound() {
             Dashboard
           </Link>
           <Link
-            href="/login"
+            href={withBasePath("/login")}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

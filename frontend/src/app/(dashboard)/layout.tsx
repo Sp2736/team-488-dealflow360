@@ -1,5 +1,6 @@
 import TopNav from '@/components/TopNav';
 import { ToastProvider } from '@/components/Toast';
+import { RouteGuard } from '@/demo/ui/RouteGuard';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,7 +8,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ToastProvider>
         <TopNav />
         <main style={{ flex: 1, padding: '32px 24px', maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
-          {children}
+          <RouteGuard>
+            {children}
+          </RouteGuard>
         </main>
       </ToastProvider>
     </div>

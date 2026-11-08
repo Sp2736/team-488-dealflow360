@@ -1,8 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { UserRole, User } from '@/lib/types';
+import { useDemoSession } from '@/demo/ui/useDemoSession';
+import { getStore, reseedStore } from '@/demo/db/store';
+import { withBasePath } from '@/lib/basePath';
+import type { UserRole } from '@/lib/types';
 
 interface NavItem {
   href: string;
@@ -25,7 +29,7 @@ const NAV_ENTRIES: NavEntry[] = [
       { href: '/quotations', label: 'Quotations' },
       { href: '/subscriptions', label: 'Subscriptions', roles: ['ADMIN', 'FINANCE', 'SALES_REP', 'SALES_MANAGER'] },
       { href: '/deal-health', label: 'Deal Health', roles: ['ADMIN', 'SALES_MANAGER', 'SALES_REP', 'FINANCE'] },
-    ]
+    ],
   },
   {
     label: 'Operations',
@@ -33,14 +37,14 @@ const NAV_ENTRIES: NavEntry[] = [
       { href: '/approvals', label: 'Approvals', roles: ['ADMIN', 'SALES_MANAGER', 'FINANCE'] },
       { href: '/fulfillment', label: 'Fulfillment', roles: ['ADMIN', 'OPERATIONS', 'SALES_MANAGER'] },
       { href: '/invoices', label: 'Invoices', roles: ['ADMIN', 'FINANCE', 'SALES_MANAGER'] },
-    ]
+    ],
   },
   {
     label: 'Catalog',
     items: [
       { href: '/products', label: 'Products' },
       { href: '/customers', label: 'Customers' },
-    ]
+    ],
   },
   { href: '/reports', label: 'Reports' },
 ];
@@ -48,35 +52,14 @@ const NAV_ENTRIES: NavEntry[] = [
 export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user, switchPersona, logout } = useDemoSession();
 
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data?.user) {
-          setCurrentUser(data.data.user);
-        } else if (data.user) {
-          setCurrentUser(data.user);
-        }
-      })
-      .catch(() => {});
-  }, [pathname]);
+  // If no user session, render nothing to avoid flash of wrong permissions
+  if (!user) {
+    return null;
+  }
 
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-  };
-
-  const handleReload = () => {
-    router.refresh();
-  };
-
-  const handleCloseWorkspace = () => {
-    router.push('/dashboard');
-  };
-
-  const currentRole = currentUser?.role || 'SALES_REP';
+  const currentRole = user.role;
 
   const isItemVisible = (item: NavItem) => {
     if (!item.roles) return true;
@@ -91,38 +74,96 @@ export default function TopNav() {
     return isItemVisible(entry) ? entry : null;
   }).filter(Boolean) as NavEntry[];
 
+  const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newRole = e.target.value as UserRole;
+    switchPersona(newRole);
+    const target = newRole === 'CUSTOMER' ? '/portal/quotation' : '/dashboard';
+    router.push(withBasePath(target));
+  };
+
+  const handleResetDemo = () => {
+    if (confirm('Reset demo state to deterministic seed? This tab’s sessionStorage will be refreshed.')) {
+      const store = getStore();
+      reseedStore(store);
+      window.location.reload();
+    }
+  };
+
+  const handleToggleTrace = () => {
+    window.dispatchEvent(new CustomEvent('df360:toggle-trace'));
+  };
+
+  const handleLogout = async () => {
+    logout();
+    router.push(withBasePath('/login'));
+  };
+
   return (
-    <header className="topbar" style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 50,
-      width: '100%',
-      boxShadow: '0 2px 0 var(--border)'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href="/dashboard" className="topbar-brand" style={{ textDecoration: 'none' }}>
-          DealFlow360
+    <header
+      className="topbar"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        width: '100%',
+        boxShadow: '0 3px 0 #000000',
+        background: '#000000',
+        padding: '0 20px',
+        height: '56px',
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
+      {/* Brand */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '16px' }}>
+        <Link
+          href={withBasePath('/dashboard')}
+          className="topbar-brand"
+          style={{ textDecoration: 'none', color: '#ffffff', fontWeight: 900, fontSize: '18px', letterSpacing: '-0.02em' }}
+        >
+          DEALFLOW360
         </Link>
+        <span
+          style={{
+            background: '#fbbf24',
+            color: '#000000',
+            fontSize: '10px',
+            fontWeight: 900,
+            padding: '2px 6px',
+            border: '1.5px solid #000',
+            textTransform: 'uppercase',
+          }}
+        >
+          DEMO
+        </span>
       </div>
 
-      <nav className="topbar-tabs">
+      {/* Tabs */}
+      <nav className="topbar-tabs" style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
         {visibleNavEntries.map((entry, idx) => {
           if ('items' in entry) {
-            // It's a group
-            const isActiveGroup = entry.items.some(item => pathname === item.href || pathname.startsWith(item.href + '/'));
+            const isActiveGroup = entry.items.some(
+              item => pathname === withBasePath(item.href) || pathname.startsWith(withBasePath(item.href) + '/')
+            );
             return (
               <div key={idx} className="topbar-dropdown">
-                <div className={`topbar-tab${isActiveGroup ? ' active' : ''}`} style={{ cursor: 'pointer' }}>
+                <div
+                  className={`topbar-tab${isActiveGroup ? ' active' : ''}`}
+                  style={{ cursor: 'pointer', color: isActiveGroup ? '#fbbf24' : '#ffffff', fontWeight: 700 }}
+                >
                   {entry.label} ▾
                 </div>
-                <div className="topbar-dropdown-content">
+                <div className="topbar-dropdown-content" style={{ border: '2px solid #000', boxShadow: '4px 4px 0px 0px #000' }}>
                   {entry.items.map(item => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    const isActive =
+                      pathname === withBasePath(item.href) ||
+                      pathname.startsWith(withBasePath(item.href) + '/');
                     return (
                       <Link
                         key={item.href}
-                        href={item.href}
+                        href={withBasePath(item.href)}
                         className={`topbar-dropdown-item${isActive ? ' active' : ''}`}
+                        style={{ fontWeight: 700 }}
                       >
                         {item.label}
                       </Link>
@@ -132,13 +173,15 @@ export default function TopNav() {
               </div>
             );
           } else {
-            // It's a single item
-            const isActive = pathname === entry.href || pathname.startsWith(entry.href + '/');
+            const isActive =
+              pathname === withBasePath(entry.href) ||
+              pathname.startsWith(withBasePath(entry.href) + '/');
             return (
               <Link
                 key={entry.href}
-                href={entry.href}
+                href={withBasePath(entry.href)}
                 className={`topbar-tab${isActive ? ' active' : ''}`}
+                style={{ color: isActive ? '#fbbf24' : '#ffffff', fontWeight: 700 }}
               >
                 {entry.label}
               </Link>
@@ -147,38 +190,146 @@ export default function TopNav() {
         })}
       </nav>
 
-      {/* User Session Info & Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-        {currentUser && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '12px' }}>
-            <span style={{ fontWeight: 600 }}>{currentUser.name}</span>
-            <span className="badge badge-info" style={{ fontSize: '10px', textTransform: 'uppercase' }}>
-              {currentUser.role}
-            </span>
-          </div>
-        )}
+      {/* Actions & Persona Switcher */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+        {/* Architecture Link */}
+        <Link
+          href={withBasePath('/architecture')}
+          style={{
+            background: '#ffffff',
+            color: '#000000',
+            fontWeight: 800,
+            fontSize: '11px',
+            padding: '4px 10px',
+            border: '2px solid #000000',
+            boxShadow: '2px 2px 0px 0px #fbbf24',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <span>📐</span>
+          <span>Architecture</span>
+        </Link>
 
-        <button onClick={handleReload} className="btn btn-secondary" title="Reload Data" style={{ fontSize: '11px', padding: '4px 8px', height: '28px' }}>
-          ↺ Reload
+        {/* Backend Trace Button */}
+        <button
+          type="button"
+          onClick={handleToggleTrace}
+          style={{
+            background: '#1e293b',
+            color: '#38bdf8',
+            fontWeight: 800,
+            fontSize: '11px',
+            padding: '4px 10px',
+            border: '2px solid #38bdf8',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+          title="Open intercepted network call trace log"
+        >
+          <span>⚡</span>
+          <span>Trace</span>
         </button>
 
-        {currentUser?.role === 'ADMIN' && (
-          <Link href="/admin" className="btn btn-secondary" style={{ fontSize: '11px', padding: '4px 8px', height: '28px' }} title="Go to Admin Back-end">
+        {/* Reset Demo Button */}
+        <button
+          type="button"
+          onClick={handleResetDemo}
+          style={{
+            background: '#374151',
+            color: '#ffffff',
+            fontWeight: 800,
+            fontSize: '11px',
+            padding: '4px 8px',
+            border: '2px solid #9ca3af',
+            cursor: 'pointer',
+          }}
+          title="Reset all store tables back to deterministic seed"
+        >
+          ↺ Reset
+        </button>
+
+        {/* Persona Switcher Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ color: '#9ca3af', fontSize: '11px', fontWeight: 700 }}>As:</span>
+          <select
+            value={currentRole}
+            onChange={handleRoleChange}
+            style={{
+              background: '#ffffff',
+              color: '#000000',
+              fontWeight: 900,
+              fontSize: '12px',
+              padding: '3px 8px',
+              border: '2px solid #000000',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value="ADMIN">ADMIN (Alex Morgan)</option>
+            <option value="SALES_REP">SALES_REP (Sarah Jenkins)</option>
+            <option value="SALES_MANAGER">SALES_MANAGER (David Kim)</option>
+            <option value="FINANCE">FINANCE (Elena Rostova)</option>
+            <option value="OPERATIONS">OPERATIONS (Marcus Vance)</option>
+            <option value="CUSTOMER">CUSTOMER (Rachel Green)</option>
+          </select>
+        </div>
+
+        {/* Admin Link if admin */}
+        {currentRole === 'ADMIN' && (
+          <Link
+            href={withBasePath('/admin')}
+            style={{
+              background: '#f59e0b',
+              color: '#000000',
+              fontSize: '11px',
+              fontWeight: 800,
+              padding: '4px 8px',
+              border: '2px solid #000',
+              textDecoration: 'none',
+            }}
+          >
             ⚙ Admin
           </Link>
         )}
 
-        <button onClick={handleCloseWorkspace} className="btn btn-secondary" title="Close current workspace and return to Dashboard" style={{ fontSize: '11px', padding: '4px 8px', height: '28px' }}>
-          ✕ Close
-        </button>
-
-        <button onClick={handleLogout} className="btn btn-secondary" style={{ fontSize: '11px', padding: '4px 10px', height: '28px' }}>
-          Logout
-        </button>
-
-        <Link href="/quotations/new" className="btn btn-primary" style={{ fontSize: '12px', padding: '6px 12px' }}>
+        {/* New Quote CTA */}
+        <Link
+          href={withBasePath('/quotations/new')}
+          style={{
+            background: '#fbbf24',
+            color: '#000000',
+            fontSize: '12px',
+            fontWeight: 900,
+            padding: '5px 12px',
+            border: '2px solid #000000',
+            boxShadow: '2px 2px 0px 0px #ffffff',
+            textDecoration: 'none',
+          }}
+        >
           + New Quote
         </Link>
+
+        {/* Logout Button */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{
+            background: 'transparent',
+            color: '#ef4444',
+            border: '1px solid #ef4444',
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '3px 8px',
+            cursor: 'pointer',
+          }}
+        >
+          Exit
+        </button>
       </div>
     </header>
   );

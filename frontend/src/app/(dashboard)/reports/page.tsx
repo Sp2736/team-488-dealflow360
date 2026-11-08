@@ -69,14 +69,20 @@ export default function ReportsPage() {
   const handleExport = async (type: 'pdf' | 'xls') => {
     setExporting(type);
     try {
-      const params = new URLSearchParams({ period });
-      if (repId) params.set('repId', repId);
-      if (status) params.set('status', status);
-      if (productId) params.set('productId', productId);
-      window.open(`/api/reports/export/${type}?${params}`, '_blank');
-      toast.success(`${type.toUpperCase()} export started`);
+      const { exportReportPdf, exportReportXls } = await import('@/demo/clientExport');
+      const exportData = { period, summary };
+
+      if (type === 'pdf') {
+        await exportReportPdf(exportData);
+      } else {
+        await exportReportXls(exportData);
+      }
+      toast.success(`${type.toUpperCase()} file generated & downloaded!`);
+    } catch (err) {
+      console.error(err);
+      toast.error(`Failed to export ${type.toUpperCase()}`);
     } finally {
-      setTimeout(() => setExporting(null), 1000);
+      setExporting(null);
     }
   };
 

@@ -3,6 +3,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { useRouter, useParams } from 'next/navigation';
+import { withBasePath } from '@/lib/basePath';
+import { getStore, prepareHandoff } from '@/demo/db/store';
+import { getSessionOrNull } from '@/demo/server/session';
 
 type LineItem = {
   productId: string;
@@ -442,20 +445,21 @@ export default function QuotationDetailPage() {
         <div className="card section">
           <h2 className="section-title">🔗 Customer Portal Link</h2>
           <p style={{ fontSize: 13, color: 'var(--fg-muted)', marginBottom: 12 }}>
-            Share this link with the customer so they can review and negotiate the quote directly.
+            Share this link with the customer so they can review and negotiate the quote directly. State is synchronized across tabs via one-time demo handoff.
           </p>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <input
               className="input"
               readOnly
-              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/portal/quotation?token=${quote.portalToken}&quoteId=${quote.id}`}
+              value={`${typeof window !== 'undefined' ? window.location.origin : ''}${withBasePath('/portal/quotation')}?token=${quote.portalToken}&quoteId=${quote.id}`}
               style={{ flex: 1, fontSize: 12, color: 'var(--fg-muted)' }}
             />
             <button
+              type="button"
               className={`btn ${copySuccess ? 'btn-success' : 'btn-secondary'}`}
               style={{ whiteSpace: 'nowrap', fontSize: 12 }}
               onClick={() => {
-                const link = `${window.location.origin}/portal/quotation?token=${quote.portalToken}&quoteId=${quote.id}`;
+                const link = `${window.location.origin}${withBasePath('/portal/quotation')}?token=${quote.portalToken}&quoteId=${quote.id}`;
                 navigator.clipboard.writeText(link).then(() => {
                   setCopySuccess(true);
                   setPortalLink(link);
@@ -464,6 +468,20 @@ export default function QuotationDetailPage() {
               }}
             >
               {copySuccess ? '✓ Copied!' : 'Copy Link'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ whiteSpace: 'nowrap', fontSize: 12 }}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  prepareHandoff(getStore().getRawData(), getSessionOrNull());
+                  const link = `${window.location.origin}${withBasePath('/portal/quotation')}?token=${quote.portalToken}&quoteId=${quote.id}`;
+                  window.open(link, '_blank');
+                }
+              }}
+            >
+              Open in New Tab ↗
             </button>
           </div>
         </div>

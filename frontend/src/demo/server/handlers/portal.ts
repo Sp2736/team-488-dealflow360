@@ -17,10 +17,14 @@ import type { Quote, Customer, QuoteLine, Product } from '@/demo/db/schema';
 export function registerPortalHandlers() {
   // GET /api/portal/quote?token=XXX
   router.get('/api/portal/quote', (ctx: DemoRequestContext) => {
-    const token = ctx.query.get('token');
-    if (!token) throw ApiError.unauthorized('Portal token required');
-
+    let token = ctx.query.get('token');
     const store = getStore();
+
+    if (!token) {
+      // Fallback to flagship seeded portal token for seamless demo experience
+      token = 'ptok_qte_0001';
+    }
+
     const quotes = store.where<Quote>('Quote', q => q.portalToken === token);
     const quote = quotes[0];
 
