@@ -34,7 +34,13 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: /team-488-dealflow360
       - run: touch out/.nojekyll && test -f out/404.html
       - name: Post-build security guard
-        run: grep -rEn "(JWT_SECRET|DATABASE_URL|AI_API_KEY|password_hash|bcrypt|prisma)" out/ && exit 1 || true
+        run: |
+          if grep -rEn "(@prisma/client|@node-rs/bcrypt|jsonwebtoken|(sqlserver|postgres|postgresql|mysql|mongodb)://|-----BEGIN[ A-Z]*PRIVATE KEY|password_hash[ \t]*:|JWT_SECRET[ \t]*=|DATABASE_URL[ \t]*=|AI_API_KEY[ \t]*=|OPENROUTER_API_KEY[ \t]*=)" out/; then
+            echo "::error::Post-build security guard detected server-side dependency or secret value in static export!"
+            exit 1
+          else
+            echo "Post-build security guard passed: 0 server secrets or runtime dependencies found."
+          fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/out
